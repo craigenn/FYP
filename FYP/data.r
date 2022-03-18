@@ -8,31 +8,33 @@ install.packages("h2o")
 library(h2o)
 
 #dataset
-mydf <- read.csv("packetlistclass.csv")
-mydf$Class <- as.factor(df$Class)
-#mydf2 <- read.csv("packetlistcensor.csv")
+mydf <- read.csv("packetlistclassprocessed.csv")
+#mydf$Class <- as.factor(df$Class)
+mydf2 <- read.csv("testtclass.csv")
 
 #remove class id column
 packets <- mydf[,-1]
 
 #start h20 cluster instance
-h2o.init(nthreads = 2)
+h2o.init(nthreads = 4)
 
 
 #convert input into h20frame
 packets_h20 <- as.h2o(mydf)
+packets_h202 <- as.h2o(mydf2)
 packets_h20$Class <- as.factor(packets_h20$Class)
 packetclassless <- as.h2o(packets)
 
 #take a look at the h20 frame
-h2o.describe(packets_h20)
+h2o.describe(packets_h202)
 
 #Split data into train and test
 y <- "Class"
 
-df_splits <- h2o.splitFrame(data = packets_h20, ratios = 0.50, seed = 1)
+df_splits <- h2o.splitFrame(data = packets_h20, ratios = 0.70, seed = 1)
 train <- df_splits[[1]]
 test <- df_splits[[2]]
+test2 <- packets_h202
 x <- setdiff(names(train), y)
 
 train[, y] <- as.factor(train[, y])
@@ -64,18 +66,53 @@ my_rf <- h2o.randomForest(x = x,
                           seed = 1)
 
 
+#NN in h2o
+my_nn <- h2o.deeplearning(x = x,
+                           y = y,
+                           training_frame = train,
+                           nfolds = 5,
+                           keep_cross_validation_predictions = TRUE,
+                           seed=1
+)
+
+my_km <- h2o.kmeans(training_frame = train,
+                    validation_frame = test,
+                    k = 2,
+                    seed = 1,
+                    
+                    
+  
+)
+
+my_svm <- h2o.psvm(x=x,
+                   y=y,
+                   training_frame = train,
+                  )
+
+my_nb <- h2o.naiveBayes(x=x,
+                        y=y,
+                        training_frame = train,
+                        nfolds = nfolds,
+                        seed = 1
+  
+)
 
 
+
+
+h2o.performance(my_km)
+h2o.confusionMatrix(ensemble2)
+#rf, nn , gbm
 # Train a stacked ensemble using the GBM and RF above
-ensemble <- h2o.stackedEnsemble(x = x,
+ensemble2 <- h2o.stackedEnsemble(x = x,
                                 y = y,
                                 training_frame = train,
-                                base_models = list(my_gbm, my_rf))
+                                base_models = list(my_gbm, my_rf, my_nn))
 
 
 
 # Eval ensemble performance on a test set
-perf <- h2o.performance(ensemble, newdata = test)
+perf <- h2o.performance(ensemble2, newdata = test)
 
 # Compare to base learner performance on the test set
 perf_gbm_test <- h2o.performance(my_gbm, newdata = test)
@@ -91,18 +128,18 @@ pred <- h2o.predict(ensemble, newdata = test)
 
 
 h2o.auc(perf_gbm_test)
-h2o.explain(ensemble, test)
+h2o.explain(ensemble2, test)
 h2o.saveModel(my_gbm, path = getwd(), force = TRUE)
 h2o.saveModel(my_rf, path = getwd(), force = TRUE)
-h2o.saveModel(ensemble, path = getwd(), force = TRUE)
+h2o.saveModel(ensemble2, path = getwd(), force = TRUE)
 
-h2o.shutdown()
-
-
+qh2o.shutdown()
 
 
 
-'#NN in h2o
+
+
+#NN in h2o
 h2o_nn <- h2o.deeplearning(x = 2:154,
                            y = 1,
                            training_frame = packets_h20,
@@ -110,5 +147,4 @@ h2o_nn <- h2o.deeplearning(x = 2:154,
                            )
 h2o.performance(h2o_nn)
 
-h2o.shutdown()
-'
+#h2o.shutdown()

@@ -1,11 +1,12 @@
 options(shiny.maxRequestSize=30*1024^2)
 #memory.limit(size = 56000)
-# Define server logic required to draw a histogram ----
+# Define server logic ----
 server <- function(input, output) {
   
   output$contents <- renderTable({
     #make it only flag malicous red background
     model <- h2o.loadModel("StackedEnsemble")
+    #model <- h2o.loadModel("StackedEnsemble_model_R_1645044782253_793")
     file <- input$file1
     ext <- tools::file_ext(file$datapath)
     
@@ -55,12 +56,18 @@ server <- function(input, output) {
   #  perf <- h2o.performance(model, pred[,3])
   #  plot(perf)
    
-    predoutput <- as.data.frame(pred)
+    predoutput <- as.data.frame(pred[1:2])
+    
     plot(predoutput)
     
   })
   output$about <- renderText({
     "<h1> this is a test </h1>"
+  })
+  
+  observeEvent(input$do, {
+    session$sendCustomMessage(type = 'testmessage',
+                              message = 'Thank you for clicking')
   })
   
   predictor <- function(input,output){

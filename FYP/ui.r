@@ -12,6 +12,7 @@ ui <- fluidPage(theme = shinytheme("slate"),
                   "text/comma-separated-values,text/plain",
                   ".csv")
       ),
+      actionButton("do", "Monitor")
       ),
     mainPanel(
       tabsetPanel(
